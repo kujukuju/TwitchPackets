@@ -15,16 +15,16 @@ class Authenticate {
                 }
 
                 console.log('Authentication completed.');
-                console.log(request.responseText);
-                return resolve(request.responseText);
+                console.log(JSON.parse(request.responseText));
+                return resolve(JSON.parse(request.responseText));
             };
             request.onerror = () => {
                 return reject(request.responseText);
             };
-            request.open('POST', 'https://id.twitch.tv/oauth2/token', true);
 
             const params = 'client_id=' + clientID + '&client_secret=' + secret + '&grant_type=client_credentials&scope=chat:read+chat:edit';
-            request.send(params);
+            request.open('POST', 'https://id.twitch.tv/oauth2/token?' + params, true);
+            request.send();
         });
     }
 }

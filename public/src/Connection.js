@@ -17,7 +17,7 @@ class Connection {
             Connection._socket.addEventListener('close', () => Connection._onClose());
         };
 
-        if (Connection._socket) {
+        if (Connection._socket && !(Connection._socket.readyState === 2 || Connection._socket.readyState === 3)) {
             console.log('Disconnecting from current socket...');
             Connection._socket.addEventListener('close', () => {
                 createNewSocket();
@@ -46,10 +46,13 @@ class Connection {
     }
 
     static _onOpen(username, clientID, token) {
-        console.log('Socket opened. ' + clientID);
+        console.log('Socket opened. ' + username + ' ' + clientID);
 
         Authenticate.authenticate(clientID, token).then(response => {
-            Connection._socket.send('PASS oauth:' + token);
+            const accessToken = response.access_token;
+            console.log('||||||PASS oauth:' + accessToken + '||||||');
+            console.log('||||||NICK ' + username + '||||||');
+            Connection._socket.send('PASS oauth:' + accessToken);
             Connection._socket.send('NICK ' + username);
         }).catch(error => {
             console.error('Something went wrong completing your authentication request. ', error);
