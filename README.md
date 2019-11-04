@@ -12,4 +12,6 @@ Use twitch to send packets between computers at a rate of 20 messages per second
  >
  > -> http://localhost:3000/
  >
- > -> Enter twitch username and bot key
+ > -> Enter twitch username, bot client id, and bot key
+ 
+ # This doesn't work yet
