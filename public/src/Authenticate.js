@@ -5,7 +5,19 @@
 'use strict';
 
 class Authenticate {
-    static authenticate(clientID, secret) {
+    static REDIRECT_URL = 'http://localhost';
+
+    static authenticate(clientID, secret, code) {
+        if (!code) {
+            const params = 'client_id=' + clientID + '&redirect_uri=' + encodeURIComponent(Authenticate.REDIRECT_URL) + '&response_type=code&scope=chat:read+chat:edit';
+            window.location.href = 'https://id.twitch.tv/oauth2/authorize?' + params;
+            return;
+        }
+
+        return Authenticate._getToken(clientID, secret, code);
+    }
+
+    static _getToken(clientID, secret, code) {
         return new Promise((resolve, reject) => {
             const request = new XMLHttpRequest();
             request.onload = () => {
@@ -22,9 +34,10 @@ class Authenticate {
                 return reject(request.responseText);
             };
 
-            const params = 'client_id=' + clientID + '&client_secret=' + secret + '&grant_type=client_credentials&scope=chat:read+chat:edit';
+            const params = 'client_id=' + clientID + '&client_secret=' + secret + '&code=' + code + '&grant_type=authorization_code&redirect_uri=' + encodeURIComponent(Authenticate.REDIRECT_URL);
             request.open('POST', 'https://id.twitch.tv/oauth2/token?' + params, true);
             request.send();
         });
     }
+
 }

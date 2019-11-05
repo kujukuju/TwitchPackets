@@ -7,13 +7,13 @@
 class Connection {
     static _socket = null;
 
-    static connect(username, clientID, token) {
+    static connect(username, clientID, secret, code) {
         const createNewSocket = () => {
             console.log('Connecting to new socket...');
             Connection._socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
             Connection._socket.addEventListener('message', event => Connection._onMessage(event));
             Connection._socket.addEventListener('error', event => Connection._onError(event));
-            Connection._socket.addEventListener('open', () => Connection._onOpen(username, clientID, token));
+            Connection._socket.addEventListener('open', () => Connection._onOpen(username, clientID, secret, code));
             Connection._socket.addEventListener('close', () => Connection._onClose());
         };
 
@@ -45,10 +45,10 @@ class Connection {
         console.error('Socket error: ', event);
     }
 
-    static _onOpen(username, clientID, token) {
+    static _onOpen(username, clientID, secret, code) {
         console.log('Socket opened. ' + username + ' ' + clientID);
 
-        Authenticate.authenticate(clientID, token).then(response => {
+        Authenticate.authenticate(clientID, secret, code).then(response => {
             const accessToken = response.access_token;
             console.log('||||||PASS oauth:' + accessToken + '||||||');
             console.log('||||||NICK ' + username + '||||||');
