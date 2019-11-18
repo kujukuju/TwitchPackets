@@ -17,6 +17,10 @@ class Authenticate {
         return Authenticate._getToken(clientID, secret, code);
     }
 
+    static refresh(clientID, secret, refreshToken) {
+        return Authenticate._refreshToken(clientID, secret, refreshToken);
+    }
+
     static _getToken(clientID, secret, code) {
         return new Promise((resolve, reject) => {
             const request = new XMLHttpRequest();
@@ -40,4 +44,26 @@ class Authenticate {
         });
     }
 
+    static _refreshToken(clientID, secret, refreshToken) {
+        return new Promise((resolve, reject) => {
+            const request = new XMLHttpRequest();
+            request.onload = () => {
+                if (request.status !== 200) {
+                    console.log('Request completed with an incorrect status. ', request.status);
+                    return reject(request.responseText);
+                }
+
+                console.log('Refresh authentication completed.');
+                console.log(JSON.parse(request.responseText));
+                return resolve(JSON.parse(request.responseText));
+            };
+            request.onerror = () => {
+                return reject(request.responseText);
+            };
+
+            const params = 'grant_type=refresh_token&refresh_token=' + refreshToken + '&client_id=' + clientID + '&client_secret=' + secret;
+            request.open('POST', 'https://id.twitch.tv/oauth2/token?' + params, true);
+            request.send();
+        });
+    }
 }

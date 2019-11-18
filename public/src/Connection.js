@@ -6,14 +6,18 @@
 
 class Connection {
     static _socket = null;
+    static _username = null;
+    static _clientID = null;
+    static _secret = null;
+    static _refreshToken = null;
 
-    static connect(username, clientID, secret, code) {
+    static connect(username, clientID, secret, refreshToken, code) {
         const createNewSocket = () => {
             console.log('Connecting to new socket...');
             Connection._socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
             Connection._socket.addEventListener('message', event => Connection._onMessage(event));
             Connection._socket.addEventListener('error', event => Connection._onError(event));
-            Connection._socket.addEventListener('open', () => Connection._onOpen(username, clientID, secret, code));
+            Connection._socket.addEventListener('open', () => Connection._onOpen(username, clientID, secret, refreshToken, code));
             Connection._socket.addEventListener('close', () => Connection._onClose());
         };
 
@@ -45,15 +49,54 @@ class Connection {
         console.error('Socket error: ', event);
     }
 
-    static _onOpen(username, clientID, secret, code) {
+    static _onOpen(username, clientID, secret, refreshToken, code) {
         console.log('Socket opened. ' + username + ' ' + clientID);
 
-        Authenticate.authenticate(clientID, secret, code).then(response => {
+        // I want to be able to reconnect without providing inputs
+        username = username || Connection._username;
+        clientID = clientID || Connection._clientID;
+        secret = secret || Connection._secret;
+        refreshToken = refreshToken || Connection._refreshToken;
+
+        localStorage.setItem('username-input', username);
+        localStorage.setItem('client-id-input', clientID);
+        localStorage.setItem('secret-token-input', secret);
+
+        const responseProcessor = (response) => {
             const accessToken = response.access_token;
+            if (!accessToken) {
+                console.error('Received a response without an access token. ', response);
+                return;
+            }
+
+            Connection._username = username;
+            Connection._clientID = clientID;
+            Connection._secret = secret;
+            Connection._refreshToken = response.refresh_token;
+
+            document.getElementById('refresh-token-input').value = Connection._refreshToken;
+            localStorage.setItem('refresh-token-input', Connection._refreshToken);
+
             console.log('||||||PASS oauth:' + accessToken + '||||||');
-            console.log('||||||NICK ' + username + '||||||');
+            console.log('||||||NICK ' + Connection._username + '||||||');
             Connection._socket.send('PASS oauth:' + accessToken);
-            Connection._socket.send('NICK ' + username);
+            Connection._socket.send('NICK ' + Connection._username);
+        };
+
+        if (refreshToken) {
+            Authenticate.refresh(clientID, secret, refreshToken).then(response => {
+                console.log('Refresh response: ', response);
+                responseProcessor(response);
+            }).catch(error => {
+                console.error('Something went wrong completing your refresh request. ', error);
+            });
+
+            return;
+        }
+
+        Authenticate.authenticate(clientID, secret, code).then(response => {
+            console.log('Authentication response: ', response);
+            responseProcessor(response);
         }).catch(error => {
             console.error('Something went wrong completing your authentication request. ', error);
         });
