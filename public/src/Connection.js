@@ -58,9 +58,10 @@ class Connection {
         secret = secret || Connection._secret;
         refreshToken = refreshToken || Connection._refreshToken;
 
-        localStorage.setItem('username-input', username);
-        localStorage.setItem('client-id-input', clientID);
-        localStorage.setItem('secret-token-input', secret);
+        localStorage.setItem('username-input', username || '');
+        localStorage.setItem('client-id-input', clientID || '');
+        localStorage.setItem('secret-token-input', secret || '');
+        localStorage.setItem('refresh-token-input', refreshToken || '');
 
         const responseProcessor = (response) => {
             const accessToken = response.access_token;
@@ -76,6 +77,11 @@ class Connection {
 
             document.getElementById('refresh-token-input').value = Connection._refreshToken;
             localStorage.setItem('refresh-token-input', Connection._refreshToken);
+
+            if (code) {
+                window.location = window.location.origin;
+                return;
+            }
 
             console.log('||||||PASS oauth:' + accessToken + '||||||');
             console.log('||||||NICK ' + Connection._username + '||||||');
