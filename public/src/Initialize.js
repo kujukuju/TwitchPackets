@@ -15,6 +15,7 @@ const getURLParams = () => {
 
 window.onload = () => {
     document.getElementById('username-input').value = localStorage.getItem('username-input') || '';
+    document.getElementById('host-username-input').value = localStorage.getItem('host-username-input') || '';
     document.getElementById('client-id-input').value = localStorage.getItem('client-id-input') || '';
     document.getElementById('secret-token-input').value = localStorage.getItem('secret-token-input') || '';
     document.getElementById('refresh-token-input').value = localStorage.getItem('refresh-token-input') || '';
@@ -23,12 +24,13 @@ window.onload = () => {
         const params = getURLParams();
 
         const username = document.getElementById('username-input').value;
+        const hostUsername = document.getElementById('host-username-input').value;
         const clientID = document.getElementById('client-id-input').value;
         const secret = document.getElementById('secret-token-input').value;
         const refreshToken = document.getElementById('refresh-token-input').value;
         const code = params.code || null;
 
-        Connection.connect(username, clientID, secret, refreshToken, code);
+        Connection.connect(username, hostUsername, clientID, secret, refreshToken, code);
 
         // const client = new tmi.Client({
         //     options: {

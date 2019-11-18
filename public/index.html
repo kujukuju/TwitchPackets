@@ -11,22 +11,32 @@
     <script type="text/javascript" src="src/Initialize.js"></script>
 
     <style>
-        button {
+        a, button {
             padding: 8px 16px;
             border: none;
             background-color: #92c9ed;
             border-radius: 2px;
             cursor: pointer;
+            font-size: 16px;
+            color: #000000;
+
+            text-decoration: none;
 
             transition: background-color 0.08s ease;
         }
 
-        button:hover {
+        a:hover, button:hover {
             background-color: #6dbaed;
         }
 
-        button:active {
+        a:active, button:active {
             background-color: #4499d0;
+        }
+
+        a.disabled, button.disabled {
+            color: #666666;
+            background-color: #a2b9cd;
+            cursor: default;
         }
     </style>
 </head>
@@ -41,7 +51,7 @@
             <div style="padding:24px;">
                 <div>Host Twitch Username (lowercase):</div>
                 <div style="font-size:12px;color:#7a7a7a;">(You should definitely own this channel because you'll spam it with packets)</div>
-                <div style="font-size:12px;color:#7a7a7a;">(This channel will be used to transfer and distribute packets)</div>
+                <div style="font-size:12px;color:#7a7a7a;">(This channel will be used to distribute packets)</div>
                 <input type="text" id="host-username-input" />
             </div>
             <div style="padding:24px;">
@@ -62,12 +72,14 @@
             <div style="padding:24px;">
                 <div style="font-size:12px;color:#7a7a7a;">First enter your client ID and your secret token. When you submit the request you'll be redirected back to this page with an authorization code appended to the url after giving the app permission.</div>
                 <br />
-                <div style="font-size:12px;color:#7a7a7a;">With the authentication code appended to the url, and the client ID and secret token automatically filled in, click start again. You'll be sent back to this same page without the authentication code, but with a refresh token in the input box.</div>
+                <div style="font-size:12px;color:#7a7a7a;">With the authentication code appended to the url, and the client ID and secret token automatically filled in, click connect again. You'll be sent back to this same page without the authentication code, but with a refresh token in the input box.</div>
                 <br />
-                <div style="font-size:12px;color:#7a7a7a;">Now you can fill in your twitch username, your twitch host username, and click start again. This will automatically connect without the need to authenticate using your refresh token, client ID, and secret token.</div>
+                <div style="font-size:12px;color:#7a7a7a;">Now you can fill in your twitch username, your twitch host username, and click connect again. This will automatically connect without the need to authenticate using your refresh token, client ID, and secret token.</div>
             </div>
-            <div style="padding:24px;">
-                <button id="start-button">Start</button>
+            <div style="display:flex;padding:24px;">
+                <button style="flex-grow:0;" id="start-button">Connect</button>
+                <div style="flex-grow:1;"></div>
+                <a class="disabled" id="download-button" style="flex-grow:0;">Download Credential File</a>
             </div>
         </div>
         <div style="background-color:#7a7a7a;width:1px;margin:0 24px;"></div>
