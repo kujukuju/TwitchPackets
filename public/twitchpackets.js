@@ -110,6 +110,10 @@ class TwitchPackets {
         return TwitchPackets._getCurrentMessageDelay() === 0;
     }
 
+    static getPacketRate() {
+        return 30000 / TwitchPackets.MESSAGES_PER_30_SECONDS;
+    }
+
     static addListener(event, listener) {
         TwitchPackets._eventListeners[event] = TwitchPackets._eventListeners[event] || [];
         TwitchPackets._eventListeners[event].push(listener);
@@ -146,7 +150,7 @@ class TwitchPackets {
         // const queueDelay = TwitchPackets._messageQueue.length * rate;
         // return sessionRateDelay + queueDelay;
 
-        const rate = 30000 / TwitchPackets.MESSAGES_PER_30_SECONDS;
+        const rate = TwitchPackets.getPacketRate();
         const mostRecentMessageDelay = Math.max(rate - (now - (TwitchPackets._messageSentTimes[TwitchPackets._messageSentTimes.length - 1] || 0)), 0);
         const queueDelay = TwitchPackets._messageQueue.length * rate;
         return mostRecentMessageDelay + queueDelay;
