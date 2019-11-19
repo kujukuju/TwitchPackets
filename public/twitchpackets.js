@@ -101,6 +101,15 @@ class TwitchPackets {
         }
     }
 
+    static isConnected() {
+        return TwitchPackets._socket && TwitchPackets._socket.readyState === 1;
+    }
+
+    static canSendPacketImmediately() {
+        // console.log(TwitchPackets._getCurrentMessageDelay());
+        return TwitchPackets._getCurrentMessageDelay() === 0;
+    }
+
     static addListener(event, listener) {
         TwitchPackets._eventListeners[event] = TwitchPackets._eventListeners[event] || [];
         TwitchPackets._eventListeners[event].push(listener);
@@ -205,10 +214,17 @@ class TwitchPackets {
             return;
         }
 
-        let invalidIndex;
-        while ((invalidIndex = message.indexOf(String.fromCharCode(0x0000))) !== -1) {
-            message = message.substring(0, invalidIndex) + String.fromCharCode(0x8000) + message.substring(invalidIndex + 1);
+        // maybe this is extreme but I think I need to fix all characters less than 32 since its text based
+        for (let i = 0; i < message.length; i++) {
+            const charCode = message.charCodeAt(i);
+            if (charCode < 32) {
+                message = message.substring(0, i) + String.fromCharCode(0x8000 | charCode) + message.substring(i + 1);
+            }
         }
+        // let invalidIndex;
+        // while ((invalidIndex = message.indexOf(String.fromCharCode(0x0000))) !== -1) {
+        //     message = message.substring(0, invalidIndex) + String.fromCharCode(0x8000) + message.substring(invalidIndex + 1);
+        // }
 
         TwitchPackets._socket.send(message);
     }
@@ -226,10 +242,16 @@ class TwitchPackets {
             return;
         }
 
-        let invalidIndex;
-        while ((invalidIndex = message.indexOf(String.fromCharCode(0x8000))) !== -1) {
-            message = message.substring(0, invalidIndex) + String.fromCharCode(0x0000) + message.substring(invalidIndex + 1);
+        for (let i = 0; i < message.length; i++) {
+            const charCode = message.charCodeAt(i) - 0x8000;
+            if (charCode >= 0 && charCode < 32) {
+                message = message.substring(0, i) + String.fromCharCode(charCode) + message.substring(i + 1);
+            }
         }
+        // let invalidIndex;
+        // while ((invalidIndex = message.indexOf(String.fromCharCode(0x8000))) !== -1) {
+        //     message = message.substring(0, invalidIndex) + String.fromCharCode(0x0000) + message.substring(invalidIndex + 1);
+        // }
 
         TwitchPackets._dispatch(TwitchPackets.EVENT_MESSAGE, {username: username, message: message});
     }

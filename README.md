@@ -39,6 +39,7 @@ This library lets you do 3 things:
 #### Create a bot and download json credential files
 
 * To create a bot just create a new account on twitch.
+* Your bot apparently must be a mod in your channel if you're going to get near the 20 messages per 30 second limit, otherwise you'll be shadow muted by twitch for some arbitrary amount of time. I learned.
 * Once this account is created navigate back to *[http://localhost/](http://localhost/)* and follow the instructions on the website.
 * Once you've authenticated you can click "download credential file" and store this on your server. The information in this file can be used to refresh your auth token.
 

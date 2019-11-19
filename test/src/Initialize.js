@@ -44,6 +44,8 @@ window.onload = () => {
                 document.getElementById('download-button').download = content.username + '.json';
                 document.getElementById('download-button').disabled = false;
                 document.getElementById('download-button').className = '';
+
+                GameExample.initialize();
             });
 
             TwitchPackets.removeListener(TwitchPackets.EVENT_DISCONNECT);
@@ -90,6 +92,4 @@ window.onload = () => {
 
         console.error('Could not process request due to lack of necessary information provided.');
     };
-
-    GameExample.initialize();
 };
