@@ -4,6 +4,7 @@
 
 'use strict';
 
+/*
 class Connection {
     static _socket = null;
     static _username = null;
@@ -114,12 +115,6 @@ class Connection {
     }
 
     static getCredentialFileContent() {
-        return {
-            username: Connection._username,
-            clientID: Connection._clientID,
-            secret: Connection._secret,
-            refreshToken: Connection._refreshToken,
-        };
     }
 
     static _onClose() {
@@ -136,3 +131,4 @@ class Connection {
         Connection._socket.addEventListener('close', () => Connection._onClose());
     }
 }
+*/

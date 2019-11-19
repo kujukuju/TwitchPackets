@@ -1,5 +1,8 @@
 // TODO this should listen to the packet expiration time and automatically regenerate before it expires
 class TwitchPackets {
+    static EVENT_CONNECT = 'connect';
+    static EVENT_DISCONNECT = 'disconnect';
+
     static _socket = null;
     static _autoReconnect = false;
     static _username = null;
@@ -7,6 +10,8 @@ class TwitchPackets {
     static _clientID = null;
     static _secret = null;
     static _refreshToken = null;
+
+    static _eventListeners = {};
 
     static getAccessToken(clientID, secret, refreshToken) {
         return new Promise((resolve, reject) => {
@@ -51,6 +56,10 @@ class TwitchPackets {
         TwitchPackets._connect(null);
     }
 
+    static send(message) {
+        TwitchPackets._send('PRIVMSG #' + TwitchPackets._hostUsername + ' :' + message);
+    }
+
     static disconnect() {
         TwitchPackets._autoReconnect = false;
         TwitchPackets._username = null;
@@ -63,10 +72,33 @@ class TwitchPackets {
         }
     }
 
+    static addListener(event, listener) {
+        TwitchPackets._eventListeners[event] = TwitchPackets._eventListeners[event] || [];
+        TwitchPackets._eventListeners[event].push(listener);
+    }
+
+    static removeListener(event, listener) {
+        if (!listener) {
+            delete TwitchPackets._eventListeners[event];
+        }
+
+        TwitchPackets._eventListeners[event] = (TwitchPackets._eventListeners[event] || []).filter(currentListener => {
+            return currentListener !== listener;
+        });
+
+        if (TwitchPackets._eventListeners[event].length === 0) {
+            delete TwitchPackets._eventListeners[event];
+        }
+    }
+
     static _connect(accessToken) {
         if (TwitchPackets._socket && !(TwitchPackets._socket.readyState === 2 || TwitchPackets._socket.readyState === 3)) {
             console.info('Twitch packets is disconnecting from the current socket...');
             TwitchPackets._socket.close();
+
+            if (!TwitchPackets._autoReconnect) {
+                TwitchPackets._createNewSocket(accessToken);
+            }
         } else {
             TwitchPackets._createNewSocket(accessToken);
         }
@@ -106,6 +138,24 @@ class TwitchPackets {
         });
     }
 
+    static _getCredentialInformation() {
+        return {
+            username: TwitchPackets._username,
+            clientID: TwitchPackets._clientID,
+            secret: TwitchPackets._secret,
+            refreshToken: TwitchPackets._refreshToken,
+        };
+    }
+
+    static _send(message) {
+        if (!TwitchPackets._socket || TwitchPackets._socket.readyState !== 1) {
+            console.log('Twitch packets tried to send a message when the socket wasn\'t ready. ', message);
+            return;
+        }
+
+        TwitchPackets._socket.send(message);
+    }
+
     static _onMessage(event) {
         console.log('Socket message: ', event);
     }
@@ -115,14 +165,18 @@ class TwitchPackets {
     }
 
     static _onOpen(accessToken) {
-        TwitchPackets.send('PASS oauth:' + accessToken);
-        TwitchPackets.send('NICK ' + TwitchPackets._username);
-        TwitchPackets.send('JOIN #' + TwitchPackets._hostUsername);
-        TwitchPackets.send('PRIVMSG #' + TwitchPackets._hostUsername + ' :Connection initialized.');
+        TwitchPackets._send('PASS oauth:' + accessToken);
+        TwitchPackets._send('NICK ' + TwitchPackets._username);
+        TwitchPackets._send('JOIN #' + TwitchPackets._hostUsername);
+        TwitchPackets._send('PRIVMSG #' + TwitchPackets._hostUsername + ' :Connection initialized.');
+
+        TwitchPackets._dispatch(TwitchPackets.EVENT_CONNECT);
     }
 
     static _onClose() {
         console.info('Twitch packets socket closed.');
+
+        TwitchPackets._dispatch(TwitchPackets.EVENT_DISCONNECT);
 
         if (!TwitchPackets._autoReconnect) {
             console.info('Twitch packets will not attempt to reconnect.');
@@ -130,5 +184,12 @@ class TwitchPackets {
         }
 
         TwitchPackets._createNewSocket(null);
+    }
+
+    static _dispatch(event, result) {
+        const listeners = TwitchPackets._eventListeners[event] || [];
+        for (let i = 0; i < listeners.length; i++) {
+            listeners[i](result);
+        }
     }
 }

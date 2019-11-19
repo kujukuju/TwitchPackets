@@ -1,5 +1,5 @@
 {
-  "name": "Twitch Packets",
+  "name": "TwitchPackets",
   "version": "1.0.0",
   "main": "public/node/index.js",
   "license": "MIT",
@@ -10,7 +10,6 @@
     "start": "node WebServer.js"
   },
   "devDependencies": {
-    "cors": "^2.8.5",
     "express": "^4.17.1"
   }
 }

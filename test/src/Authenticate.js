@@ -7,13 +7,12 @@
 class Authenticate {
     static REDIRECT_URL = 'http://localhost';
 
-    static authenticate(clientID, secret, code) {
-        if (!code) {
-            const params = 'client_id=' + clientID + '&redirect_uri=' + encodeURIComponent(Authenticate.REDIRECT_URL) + '&response_type=code&scope=chat:read+chat:edit';
-            window.location.href = 'https://id.twitch.tv/oauth2/authorize?' + params;
-            return;
-        }
+    static fetchCode(clientID) {
+        const params = 'client_id=' + clientID + '&redirect_uri=' + encodeURIComponent(Authenticate.REDIRECT_URL) + '&response_type=code&scope=chat:read+chat:edit';
+        window.location.href = 'https://id.twitch.tv/oauth2/authorize?' + params;
+    }
 
+    static authenticate(clientID, secret, code) {
         return Authenticate._getToken(clientID, secret, code);
     }
 
