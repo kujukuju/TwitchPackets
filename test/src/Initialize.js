@@ -90,4 +90,6 @@ window.onload = () => {
 
         console.error('Could not process request due to lack of necessary information provided.');
     };
+
+    GameExample.initialize();
 };

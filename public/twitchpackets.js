@@ -1,8 +1,13 @@
 // TODO this should listen to the packet expiration time and automatically regenerate before it expires
 class TwitchPackets {
+    static MESSAGES_PER_30_SECONDS = 20;
     static EVENT_CONNECT = 'connect';
     static EVENT_DISCONNECT = 'disconnect';
+    static EVENT_RAW_MESSAGE = 'raw-message';
+    static EVENT_MESSAGE = 'message';
+    static EVENT_ERROR = 'error';
 
+    // socket information
     static _socket = null;
     static _autoReconnect = false;
     static _username = null;
@@ -11,7 +16,12 @@ class TwitchPackets {
     static _secret = null;
     static _refreshToken = null;
 
+    // event listeners
     static _eventListeners = {};
+
+    // rate limiting
+    static _messageSentTimes = [];
+    static _messageQueue = [];
 
     static getAccessToken(clientID, secret, refreshToken) {
         return new Promise((resolve, reject) => {
@@ -57,7 +67,26 @@ class TwitchPackets {
     }
 
     static send(message) {
-        TwitchPackets._send('PRIVMSG #' + TwitchPackets._hostUsername + ' :' + message);
+        if (message.length > 500) {
+            console.warn('Twitch packets tried to send a message that was over the 500 character limit. ', message);
+            return;
+        }
+
+        const delay = TwitchPackets._getCurrentMessageDelay();
+        const sendPromise = new Promise(resolve => {
+            setTimeout(() => {
+                TwitchPackets._send('PRIVMSG #' + TwitchPackets._hostUsername + ' :' + message);
+                return resolve();
+            }, delay);
+        });
+
+        TwitchPackets._messageQueue.push(sendPromise);
+        sendPromise.then(() => {
+            TwitchPackets._messageQueue = TwitchPackets._messageQueue.filter(promise => promise !== sendPromise);
+            TwitchPackets._addMessageSentTime();
+        });
+
+        return sendPromise;
     }
 
     static disconnect() {
@@ -89,6 +118,29 @@ class TwitchPackets {
         if (TwitchPackets._eventListeners[event].length === 0) {
             delete TwitchPackets._eventListeners[event];
         }
+    }
+
+    static _addMessageSentTime() {
+        TwitchPackets._messageSentTimes.push(Date.now());
+    }
+
+    static _getCurrentMessageDelay() {
+        const now = Date.now();
+
+        while (TwitchPackets._messageSentTimes.length > 0 && now - TwitchPackets._messageSentTimes[0] > 30000) {
+            TwitchPackets._messageSentTimes.shift();
+        }
+
+        // the problem with this logic, although its neat, is that if theres ever a delay in sending, then 30 seconds past that there will be a cluster of sending, then 30 seconds past that there will be another delay, and so on
+        // const rate = 30000 / TwitchPackets.MESSAGES_PER_30_SECONDS;
+        // const sessionRateDelay = Math.max((TwitchPackets._messageSentTimes.length + 1) * rate - (now - TwitchPackets._messageSentTimes[0] || 0), 0);
+        // const queueDelay = TwitchPackets._messageQueue.length * rate;
+        // return sessionRateDelay + queueDelay;
+
+        const rate = 30000 / TwitchPackets.MESSAGES_PER_30_SECONDS;
+        const mostRecentMessageDelay = Math.max(rate - (now - (TwitchPackets._messageSentTimes[TwitchPackets._messageSentTimes.length - 1] || 0)), 0);
+        const queueDelay = TwitchPackets._messageQueue.length * rate;
+        return mostRecentMessageDelay + queueDelay;
     }
 
     static _connect(accessToken) {
@@ -149,26 +201,50 @@ class TwitchPackets {
 
     static _send(message) {
         if (!TwitchPackets._socket || TwitchPackets._socket.readyState !== 1) {
-            console.log('Twitch packets tried to send a message when the socket wasn\'t ready. ', message);
+            console.info('Twitch packets tried to send a message when the socket wasn\'t ready. ', message);
             return;
+        }
+
+        let invalidIndex;
+        while ((invalidIndex = message.indexOf(String.fromCharCode(0x0000))) !== -1) {
+            message = message.substring(0, invalidIndex) + String.fromCharCode(0x8000) + message.substring(invalidIndex + 1);
         }
 
         TwitchPackets._socket.send(message);
     }
 
     static _onMessage(event) {
-        console.log('Socket message: ', event);
+        TwitchPackets._dispatch(TwitchPackets.EVENT_RAW_MESSAGE, event);
+
+        const username = event.data.split('!')[0].substring(1);
+        if (username === TwitchPackets._username) {
+            return;
+        }
+
+        let message = event.data ? event.data.split('PRIVMSG #' + TwitchPackets._hostUsername + ' :')[1] : undefined;
+        if (message === undefined) {
+            return;
+        }
+
+        let invalidIndex;
+        while ((invalidIndex = message.indexOf(String.fromCharCode(0x8000))) !== -1) {
+            message = message.substring(0, invalidIndex) + String.fromCharCode(0x0000) + message.substring(invalidIndex + 1);
+        }
+
+        TwitchPackets._dispatch(TwitchPackets.EVENT_MESSAGE, {username: username, message: message});
     }
 
     static _onError(event) {
         console.error('Twitch packets socket error: ', event);
+
+        TwitchPackets._dispatch(TwitchPackets.EVENT_ERROR, event);
     }
 
     static _onOpen(accessToken) {
+        console.info('Twitch packets socket connected.');
         TwitchPackets._send('PASS oauth:' + accessToken);
         TwitchPackets._send('NICK ' + TwitchPackets._username);
         TwitchPackets._send('JOIN #' + TwitchPackets._hostUsername);
-        TwitchPackets._send('PRIVMSG #' + TwitchPackets._hostUsername + ' :Connection initialized.');
 
         TwitchPackets._dispatch(TwitchPackets.EVENT_CONNECT);
     }
