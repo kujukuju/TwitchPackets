@@ -1,5 +1,339 @@
 // TODO this should listen to the packet expiration time and automatically regenerate before it expires
 class TwitchPackets {
+    static INVALID_CHAR_CODE_MAPS = {
+        0: '里',
+        1: 'あ',
+        2: 'い',
+        3: 'う',
+        4: 'え',
+        5: 'お',
+        6: 'か',
+        7: 'き',
+        8: 'く',
+        9: 'け',
+        10: 'こ',
+        11: 'が',
+        12: 'ぎ',
+        13: 'ぐ',
+        14: 'げ',
+        15: 'ご',
+        16: 'さ',
+        17: 'し',
+        18: 'す',
+        19: 'せ',
+        20: 'そ',
+        21: 'ざ',
+        22: 'じ',
+        23: 'ず',
+        24: 'ぜ',
+        25: 'ぞ',
+        26: 'た',
+        27: 'ち',
+        28: 'つ',
+        29: 'て',
+        30: 'と',
+        31: 'だ',
+        32: 'ぢ',
+        46: 'づ',
+        47: 'で',
+        127: 'ど',
+        128: 'な',
+        129: 'に',
+        130: 'ぬ',
+        131: 'ね',
+        132: 'の',
+        133: 'は',
+        134: 'ひ',
+        135: 'ふ',
+        136: 'へ',
+        137: 'ほ',
+        138: 'ば',
+        139: 'び',
+        140: 'ぶ',
+        141: 'べ',
+        142: 'ぼ',
+        143: 'ぱ',
+        144: 'ぴ',
+        145: 'ぷ',
+        146: 'ぺ',
+        147: 'ぽ',
+        148: 'ま',
+        149: 'み',
+        150: 'む',
+        151: 'め',
+        152: 'も',
+        153: 'や',
+        154: 'ゆ',
+        155: 'よ',
+        156: 'ら',
+        157: 'り',
+        158: 'る',
+        159: 'れ',
+        160: 'ろ',
+        161: 'わ',
+        162: 'を',
+        163: 'ん',
+        164: '的',
+        165: '一',
+        166: '人',
+        167: '口',
+        168: '土',
+        169: '女',
+        170: '心',
+        171: '手',
+        172: '日',
+        173: '月',
+        174: '木',
+        175: '氵',
+        176: '火',
+        177: '纟',
+        178: '艹',
+        179: '讠',
+        180: '辶',
+        181: '钅',
+        182: '刂',
+        183: '宀',
+        184: '贝',
+        185: '匕',
+        186: '力',
+        187: '又',
+        188: '犭',
+        189: '禾',
+        190: '虫',
+        191: '阝',
+        192: '大',
+        193: '广',
+        194: '田',
+        195: '目',
+        196: '石',
+        197: '衤',
+        198: '足',
+        199: '马',
+        200: '页',
+        201: '巾',
+        202: '米',
+        203: '车',
+        204: '八',
+        205: '尸',
+        206: '寸',
+        207: '山',
+        208: '攵',
+        209: '彳',
+        210: '十',
+        211: '工',
+        212: '方',
+        213: '门',
+        214: '饣',
+        215: '欠',
+        216: '儿',
+        217: '冫',
+        218: '子',
+        219: '疒',
+        220: '隹',
+        221: '斤',
+        222: '亠',
+        223: '王',
+        224: '白',
+        225: '立',
+        226: '羊',
+        227: '艮',
+        228: '冖',
+        229: '厂',
+        230: '皿',
+        231: '礻',
+        232: '穴',
+        233: '走',
+        234: '雨',
+        235: '囗',
+        236: '小',
+        237: '戈',
+        238: '几',
+        239: '舌',
+        240: '干',
+        241: '殳',
+        242: '夕',
+        243: '止',
+        244: '牜',
+        245: '皮',
+        246: '耳',
+        247: '辛',
+        248: '酉',
+        249: '青',
+        250: '鸟',
+        251: '弓',
+        252: '厶',
+        253: '户',
+        254: '羽',
+        255: '舟',
+    };
+
+    static INVERTED_INVALID_CHAR_CODE_MAPS = {
+        '里': 0,
+        'あ': 1,
+        'い': 2,
+        'う': 3,
+        'え': 4,
+        'お': 5,
+        'か': 6,
+        'き': 7,
+        'く': 8,
+        'け': 9,
+        'こ': 10,
+        'が': 11,
+        'ぎ': 12,
+        'ぐ': 13,
+        'げ': 14,
+        'ご': 15,
+        'さ': 16,
+        'し': 17,
+        'す': 18,
+        'せ': 19,
+        'そ': 20,
+        'ざ': 21,
+        'じ': 22,
+        'ず': 23,
+        'ぜ': 24,
+        'ぞ': 25,
+        'た': 26,
+        'ち': 27,
+        'つ': 28,
+        'て': 29,
+        'と': 30,
+        'だ': 31,
+        'ぢ': 32,
+        'づ': 46,
+        'で': 47,
+        'ど': 127,
+        'な': 128,
+        'に': 129,
+        'ぬ': 130,
+        'ね': 131,
+        'の': 132,
+        'は': 133,
+        'ひ': 134,
+        'ふ': 135,
+        'へ': 136,
+        'ほ': 137,
+        'ば': 138,
+        'び': 139,
+        'ぶ': 140,
+        'べ': 141,
+        'ぼ': 142,
+        'ぱ': 143,
+        'ぴ': 144,
+        'ぷ': 145,
+        'ぺ': 146,
+        'ぽ': 147,
+        'ま': 148,
+        'み': 149,
+        'む': 150,
+        'め': 151,
+        'も': 152,
+        'や': 153,
+        'ゆ': 154,
+        'よ': 155,
+        'ら': 156,
+        'り': 157,
+        'る': 158,
+        'れ': 159,
+        'ろ': 160,
+        'わ': 161,
+        'を': 162,
+        'ん': 163,
+        '的': 164,
+        '一': 165,
+        '人': 166,
+        '口': 167,
+        '土': 168,
+        '女': 169,
+        '心': 170,
+        '手': 171,
+        '日': 172,
+        '月': 173,
+        '木': 174,
+        '氵': 175,
+        '火': 176,
+        '纟': 177,
+        '艹': 178,
+        '讠': 179,
+        '辶': 180,
+        '钅': 181,
+        '刂': 182,
+        '宀': 183,
+        '贝': 184,
+        '匕': 185,
+        '力': 186,
+        '又': 187,
+        '犭': 188,
+        '禾': 189,
+        '虫': 190,
+        '阝': 191,
+        '大': 192,
+        '广': 193,
+        '田': 194,
+        '目': 195,
+        '石': 196,
+        '衤': 197,
+        '足': 198,
+        '马': 199,
+        '页': 200,
+        '巾': 201,
+        '米': 202,
+        '车': 203,
+        '八': 204,
+        '尸': 205,
+        '寸': 206,
+        '山': 207,
+        '攵': 208,
+        '彳': 209,
+        '十': 210,
+        '工': 211,
+        '方': 212,
+        '门': 213,
+        '饣': 214,
+        '欠': 215,
+        '儿': 216,
+        '冫': 217,
+        '子': 218,
+        '疒': 219,
+        '隹': 220,
+        '斤': 221,
+        '亠': 222,
+        '王': 223,
+        '白': 224,
+        '立': 225,
+        '羊': 226,
+        '艮': 227,
+        '冖': 228,
+        '厂': 229,
+        '皿': 230,
+        '礻': 231,
+        '穴': 232,
+        '走': 233,
+        '雨': 234,
+        '囗': 235,
+        '小': 236,
+        '戈': 237,
+        '几': 238,
+        '舌': 239,
+        '干': 240,
+        '殳': 241,
+        '夕': 242,
+        '止': 243,
+        '牜': 244,
+        '皮': 245,
+        '耳': 246,
+        '辛': 247,
+        '酉': 248,
+        '青': 249,
+        '鸟': 250,
+        '弓': 251,
+        '厶': 252,
+        '户': 253,
+        '羽': 254,
+        '舟': 255,
+    };
+
     static MESSAGES_PER_30_SECONDS = 20;
     static EVENT_CONNECT = 'connect';
     static EVENT_DISCONNECT = 'disconnect';
@@ -67,8 +401,24 @@ class TwitchPackets {
     }
 
     static send(message) {
+        if (!message) {
+            return;
+        }
+
+        // validate every fucking character
+        for (let i = 0; i < message.length; i++) {
+            if (message.charCodeAt(i) > 255) {
+                console.error('Your message contained a character that had a character code > 255, which isn\'t allowed. ', message.charCodeAt(i), message.charAt(i));
+                return;
+            }
+
+            if (TwitchPackets.INVALID_CHAR_CODE_MAPS.hasOwnProperty(message.charCodeAt(i))) {
+                message = message.substring(0, i) + TwitchPackets.INVALID_CHAR_CODE_MAPS[message.charCodeAt(i)] + message.substring(i + 1);
+            }
+        }
+
         if (message.length > 500) {
-            console.warn('Twitch packets tried to send a message that was over the 500 character limit. ', message);
+            console.error('Twitch packets tried to send a message that was over the 500 character limit. ', message);
             return;
         }
 
@@ -106,7 +456,6 @@ class TwitchPackets {
     }
 
     static canSendPacketImmediately() {
-        // console.log(TwitchPackets._getCurrentMessageDelay());
         return TwitchPackets._getCurrentMessageDelay() === 0;
     }
 
@@ -218,18 +567,6 @@ class TwitchPackets {
             return;
         }
 
-        // maybe this is extreme but I think I need to fix all characters less than 32 since its text based
-        for (let i = 0; i < message.length; i++) {
-            const charCode = message.charCodeAt(i);
-            if (charCode < 32) {
-                message = message.substring(0, i) + String.fromCharCode(0x8000 | charCode) + message.substring(i + 1);
-            }
-        }
-        // let invalidIndex;
-        // while ((invalidIndex = message.indexOf(String.fromCharCode(0x0000))) !== -1) {
-        //     message = message.substring(0, invalidIndex) + String.fromCharCode(0x8000) + message.substring(invalidIndex + 1);
-        // }
-
         TwitchPackets._socket.send(message);
     }
 
@@ -246,16 +583,12 @@ class TwitchPackets {
             return;
         }
 
+        // un-validate every fucking character
         for (let i = 0; i < message.length; i++) {
-            const charCode = message.charCodeAt(i) - 0x8000;
-            if (charCode >= 0 && charCode < 32) {
-                message = message.substring(0, i) + String.fromCharCode(charCode) + message.substring(i + 1);
+            if (TwitchPackets.INVERTED_INVALID_CHAR_CODE_MAPS.hasOwnProperty(message.charAt(i))) {
+                message = message.substring(0, i) + String.fromCharCode(TwitchPackets.INVERTED_INVALID_CHAR_CODE_MAPS[message.charAt(i)]) + message.substring(i + 1);
             }
         }
-        // let invalidIndex;
-        // while ((invalidIndex = message.indexOf(String.fromCharCode(0x8000))) !== -1) {
-        //     message = message.substring(0, invalidIndex) + String.fromCharCode(0x0000) + message.substring(invalidIndex + 1);
-        // }
 
         TwitchPackets._dispatch(TwitchPackets.EVENT_MESSAGE, {username: username, message: message});
     }

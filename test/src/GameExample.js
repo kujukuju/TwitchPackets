@@ -74,6 +74,8 @@ class GameExample {
 }
 
 class GameLogic {
+    static TICK = 17;
+
     static _playerListByName = {};
 
     static update() {
@@ -102,7 +104,7 @@ class GameLogic {
         }
 
         // very quickly and poorly set the logic loop delay based on immediate performance
-        const delay = Math.max(17 - (Date.now() - time), 0);
+        const delay = Math.max(GameLogic.TICK - (Date.now() - time), 0);
         setTimeout(GameLogic.update, delay);
     }
 
@@ -128,7 +130,7 @@ class GameRenderer {
         const playerNames = Object.keys(GameLogic._playerListByName);
         for (let i = 0; i < playerNames.length; i++) {
             // interpolate the rendering for all non-client players, normally youd offset by latency too but we dont know latency
-            const renderTime = playerNames[i] === GameExample.HARDCODED_CLIENT_USERNAME ? time : time - TwitchPackets.getPacketRate();
+            const renderTime = playerNames[i] === GameExample.HARDCODED_CLIENT_USERNAME ? time - GameLogic.TICK : time - TwitchPackets.getPacketRate();
             GameLogic._playerListByName[playerNames[i]].render(renderTime, GameRenderer._context);
         }
 
@@ -167,17 +169,21 @@ class Player {
     _username = null;
     _lastActiveTime = 0;
     _position = [0, 0];
+    _positionTime = 0;
+    _lastPosition = [0, 0];
+    _lastPositionTime = 0;
     _velocity = [0, 0];
     _inputs = [false, false, false, false];
-
-    // user for interpolation
-    _positionsByTime = {};
 
     constructor(username) {
         this._username = username;
         this._lastActiveTime = Date.now();
         this._position[0] = Math.random() - 0.5;
         this._position[1] = Math.random() - 0.5;
+        this._positionTime = Date.now();
+        this._lastPosition[0] = this._position[0];
+        this._lastPosition[1] = this._position[1];
+        this._lastPositionTime = Date.now();
     }
 
     update(time) {
@@ -217,6 +223,7 @@ class Player {
     }
 
     render(time, context) {
+        // const renderPosition = this._position;
         const renderPosition = this._getInterpolatedPosition(time);
 
         const dimensions = GameRenderer.getDimensions();
@@ -239,14 +246,12 @@ class Player {
     }
 
     setPosition(x, y) {
+        this._lastPosition[0] = this._position[0];
+        this._lastPosition[1] = this._position[1];
+        this._lastPositionTime = this._positionTime;
         this._position[0] = x;
         this._position[1] = y;
-        this._positionsByTime[Date.now()] = [x, y];
-
-        const times = Object.keys(this._positionsByTime).sort((a, b) => a - b);
-        while (times.length > 10) {
-            delete this._positionsByTime[times.shift()];
-        }
+        this._positionTime = Date.now();
     }
 
     setVelocity(x, y) {
@@ -263,32 +268,12 @@ class Player {
     }
 
     _getInterpolatedPosition(time) {
-        const times = Object.keys(this._positionsByTime).sort((a, b) => a - b);
-        if (times.length === 0) {
-            return this._position;
-        }
+        const percentageThrough = Math.max(Math.min((time - this._lastPositionTime) / (this._positionTime - this._lastPositionTime), 1), 0);
 
-        if (time >= times[times.length - 1]) {
-            return this._positionsByTime[times[times.length - 1]];
-        }
-
-        if (time <= times[0]) {
-            return this._positionsByTime[times[0]];
-        }
-
-        for (let i = 1; i < times.length; i++) {
-            if (times[i] > time) {
-                const lowerBound = times[i - 1];
-                const upperBound = times[i];
-
-                const percent = (time - lowerBound) / (upperBound - lowerBound);
-                const lowerPos = this._positionsByTime[lowerBound];
-                const upperPos = this._positionsByTime[upperBound];
-                return [lowerPos[0] + (upperPos[0] - lowerPos[0]) * percent, lowerPos[1] + (upperPos[1] - lowerPos[1]) * percent];
-            }
-        }
-
-        return this._position;
+        return [
+            this._lastPosition[0] + (this._position[0] - this._lastPosition[0]) * percentageThrough,
+            this._lastPosition[1] + (this._position[1] - this._lastPosition[1]) * percentageThrough,
+        ];
     }
 }
 
@@ -309,25 +294,25 @@ class PacketProcessor {
             case PacketProcessor.PACKET_TYPE_POSITION: {
                 // 1 character for the packet type, 2 characters for each float
                 const x = PacketProcessor._getFloatFromString(packet.substring(1));
-                const y = PacketProcessor._getFloatFromString(packet.substring(3));
+                const y = PacketProcessor._getFloatFromString(packet.substring(5));
 
                 GameLogic.getPlayer(username).setActive();
                 GameLogic.getPlayer(username).setPosition(x, y);
 
                 // continue the rest of the packet since we chain them together
-                PacketProcessor.processPacket(username, packet.substring(5));
+                PacketProcessor.processPacket(username, packet.substring(9));
             } break;
 
             case PacketProcessor.PACKET_TYPE_VELOCITY: {
                 // 1 character for the packet type, 2 characters for each float
                 const x = PacketProcessor._getFloatFromString(packet.substring(1));
-                const y = PacketProcessor._getFloatFromString(packet.substring(3));
+                const y = PacketProcessor._getFloatFromString(packet.substring(5));
 
                 GameLogic.getPlayer(username).setActive();
                 GameLogic.getPlayer(username).setVelocity(x, y);
 
                 // continue the rest of the packet since we chain them together
-                PacketProcessor.processPacket(username, packet.substring(5));
+                PacketProcessor.processPacket(username, packet.substring(9));
             } break;
 
             case PacketProcessor.PACKET_TYPE_INPUT: {
@@ -357,14 +342,14 @@ class PacketProcessor {
         const xCharacters = PacketProcessor._getCharactersFromFloat(x);
         const yCharacters = PacketProcessor._getCharactersFromFloat(y);
 
-        return String.fromCharCode(PacketProcessor.PACKET_TYPE_POSITION) + xCharacters[0] + xCharacters[1] + yCharacters[0] + yCharacters[1];
+        return String.fromCharCode(PacketProcessor.PACKET_TYPE_POSITION) + xCharacters.join('') + yCharacters.join('');
     }
 
     static createVelocityPacket(x, y) {
         const xCharacters = PacketProcessor._getCharactersFromFloat(x);
         const yCharacters = PacketProcessor._getCharactersFromFloat(y);
 
-        return String.fromCharCode(PacketProcessor.PACKET_TYPE_VELOCITY) + xCharacters[0] + xCharacters[1] + yCharacters[0] + yCharacters[1];
+        return String.fromCharCode(PacketProcessor.PACKET_TYPE_VELOCITY) + xCharacters.join('') + yCharacters.join('');
     }
 
     static createInputPacket(w, a, s, d) {
@@ -376,16 +361,23 @@ class PacketProcessor {
     static _getCharactersFromFloat(value) {
         PacketProcessor._floatBuffer[0] = value;
         const intVal = PacketProcessor._intBuffer[0];
-        const leftChar = String.fromCharCode((intVal & 0xffff0000) >> 16);
-        const rightChar = String.fromCharCode(intVal & 0x0000ffff);
 
-        return [leftChar, rightChar];
+        return [
+            String.fromCharCode((intVal & 0xff000000) >>> 24),
+            String.fromCharCode((intVal & 0x00ff0000) >>> 16),
+            String.fromCharCode((intVal & 0x0000ff00) >>> 8),
+            String.fromCharCode(intVal & 0x000000ff),
+        ];
     }
 
     static _getFloatFromString(string) {
-        const leftVal = string.charCodeAt(0);
-        const rightVal = string.charCodeAt(1);
-        PacketProcessor._intBuffer[0] = (leftVal << 16) | rightVal;
+        const values = [
+            string.charCodeAt(0),
+            string.charCodeAt(1),
+            string.charCodeAt(2),
+            string.charCodeAt(3),
+        ];
+        PacketProcessor._intBuffer[0] = (values[0] << 24) | (values[1] << 16) | (values[2] << 8) | values[3];
 
         return PacketProcessor._floatBuffer[0];
     }
