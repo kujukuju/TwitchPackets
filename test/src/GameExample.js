@@ -382,3 +382,13 @@ class PacketProcessor {
         return PacketProcessor._floatBuffer[0];
     }
 }
+
+if (typeof module === 'undefined') {
+    module = {
+        exports: null,
+    };
+}
+
+module.exports = {
+    PacketProcessor,
+};

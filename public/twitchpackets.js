@@ -1,4 +1,9 @@
 // TODO this should listen to the packet expiration time and automatically regenerate before it expires
+
+const isNode = typeof module !== 'undefined';
+
+const WebSocket = !isNode ? WebSocket : require('websocket').w3cwebsocket;
+
 class TwitchPackets {
     static INVALID_CHAR_CODE_MAPS = {
         0: '里',
@@ -628,3 +633,11 @@ class TwitchPackets {
         }
     }
 }
+
+if (!isNode) {
+    module = {
+        exports: null,
+    };
+}
+
+module.exports = TwitchPackets;

@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-require('../twitchpackets');
+const TwitchPackets = require('../twitchpackets');
 
 // overwrite the getAccessToken method to be node compatible
 TwitchPackets.getAccessToken = (clientID, secret, refreshToken) => {
@@ -12,7 +12,8 @@ TwitchPackets.getAccessToken = (clientID, secret, refreshToken) => {
             }
 
             console.info('Twitch packets refresh authentication completed successfully.');
-            return resolve(JSON.parse(response.data));
+            console.log(response);
+            return resolve(response.data);
         }).catch(error => {
             return reject(error);
         });
