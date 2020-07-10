@@ -1,6 +1,9 @@
 ## Twitch as a Packet Distributor
 
-Use twitch to send packets between computers at a rate of 20 messages per second!
+Use twitch to send packets between computers at a rate of 2 messages per second!
+
+    NOTE: The accounts used must be mods, or otherwise you have to lower their messages per 30 seconds to 20 in the source code.
+    Even then you'll probably still be "shadow muted" if you're not a mod.
 
 This library lets you do 3 things:
 * Create json credential files for your account.
