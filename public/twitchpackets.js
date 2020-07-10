@@ -2,7 +2,7 @@
 
 const isNode = typeof module !== 'undefined';
 
-const WebSocket = !isNode ? WebSocket : require('websocket').w3cwebsocket;
+const WebSocket = !isNode ? window.WebSocket : require('websocket').w3cwebsocket;
 
 class TwitchPackets {
     static INVALID_CHAR_CODE_MAPS = {
@@ -339,7 +339,7 @@ class TwitchPackets {
         '舟': 255,
     };
 
-    static MESSAGES_PER_30_SECONDS = 20;
+    static MESSAGES_PER_30_SECONDS = 60;
     static EVENT_CONNECT = 'connect';
     static EVENT_DISCONNECT = 'disconnect';
     static EVENT_RAW_MESSAGE = 'raw-message';
@@ -595,7 +595,7 @@ class TwitchPackets {
             }
         }
 
-        TwitchPackets._dispatch(TwitchPackets.EVENT_MESSAGE, {username: username, message: message});
+        TwitchPackets._dispatch(TwitchPackets.EVENT_MESSAGE, {username: username, message: message.substring(0, message.length - 2)});
     }
 
     static _onError(event) {
