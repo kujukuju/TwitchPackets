@@ -60,7 +60,7 @@ window.onload = () => {
 
         // the second to last state is when you dont have a code
         if (!code) {
-            Authenticate.fetchCode(clientID);
+            Authenticate.fetchCode(clientID, true);
             return;
         }
 

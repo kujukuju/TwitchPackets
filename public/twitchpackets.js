@@ -4,6 +4,86 @@ const isNode = typeof module !== 'undefined';
 
 const WebSocket = !isNode ? window.WebSocket : require('websocket').w3cwebsocket;
 
+class TwitchAuthenticate {
+    static fetchCode(clientID, modPermissions) {
+        const defaultLocation = window.location.origin + '/';
+
+        const params = 'client_id=' + clientID + '&redirect_uri=' + encodeURIComponent(defaultLocation) + '&response_type=code&scope=chat:read+chat:edit' + (modPermissions ? '+channel:moderate' : '');
+        window.location.href = 'https://id.twitch.tv/oauth2/authorize?' + params;
+    }
+
+    static authenticate(clientID, secret, code) {
+        const defaultLocation = window.location.origin + '/';
+
+        return new Promise((resolve, reject) => {
+            const request = new XMLHttpRequest();
+            request.onload = () => {
+                if (request.status !== 200) {
+                    console.log('Request completed with an incorrect status. ', request.status);
+                    return reject(request.responseText);
+                }
+
+                console.log('Authentication completed.');
+                console.log(JSON.parse(request.responseText));
+                return resolve(JSON.parse(request.responseText));
+            };
+            request.onerror = () => {
+                return reject(request.responseText);
+            };
+
+            const params = 'client_id=' + clientID + '&client_secret=' + secret + '&code=' + code + '&grant_type=authorization_code&redirect_uri=' + encodeURIComponent(defaultLocation);
+            request.open('POST', 'https://id.twitch.tv/oauth2/token?' + params, true);
+            request.send();
+        });
+    }
+    
+    static getURLParams() {
+        const vars = {};
+        window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, (m, key, value) => {
+            vars[key] = value;
+        });
+    
+        return vars;
+    }
+
+    static autoAuthenticatePleb(clientID, secret) {
+        const defaultLocation = window.location.origin + '/';
+
+        const code = TwitchAuthenticate.getURLParams().code;
+        if (!code) {
+            TwitchAuthenticate.fetchCode(clientID, false, defaultLocation);
+            return;
+        }
+
+        window.history.replaceState(null, '', defaultLocation);
+
+        TwitchAuthenticate.authenticate(clientID, secret, code).then(response => {
+            TwitchPackets.connectPermanent(null, 'kujukuju', clientID, secret, response.refresh_token);
+        });
+    }
+
+    static autoAuthenticateMod(clientID, secret) {
+        const defaultLocation = window.location.origin + '/';
+
+        const code = TwitchAuthenticate.getURLParams().code;
+        if (!code) {
+            TwitchAuthenticate.fetchCode(clientID, false, defaultLocation);
+            return;
+        }
+
+        window.history.replaceState(null, '', defaultLocation);
+
+        TwitchAuthenticate.authenticate(clientID, secret, code).then(response => {
+            TwitchPackets.connectPermanent(null, 'kujukuju', clientID, secret, response.refresh_token);
+        });
+        
+        TwitchPackets.addListener(TwitchPackets.EVENT_CONNECT, () => {
+            const content = TwitchPackets._getCredentialInformation();
+            console.log(content);
+        });
+    }
+}
+
 class TwitchPackets {
     static INVALID_CHAR_CODE_MAPS = {
         0: '里',
@@ -444,6 +524,41 @@ class TwitchPackets {
         return sendPromise;
     }
 
+    static sendText(message) {
+        if (!message) {
+            return;
+        }
+
+        // validate every fucking character
+        for (let i = 0; i < message.length; i++) {
+            if (message.charCodeAt(i) > 255) {
+                console.error('Your message contained a character that had a character code > 255, which isn\'t allowed. ', message.charCodeAt(i), message.charAt(i));
+                return;
+            }
+        }
+
+        if (message.length > 500) {
+            console.error('Twitch packets tried to send a message that was over the 500 character limit. ', message);
+            return;
+        }
+
+        const delay = TwitchPackets._getCurrentMessageDelay();
+        const sendPromise = new Promise(resolve => {
+            setTimeout(() => {
+                TwitchPackets._send('PRIVMSG #' + TwitchPackets._hostUsername + ' :' + message);
+                return resolve();
+            }, delay);
+        });
+
+        TwitchPackets._messageQueue.push(sendPromise);
+        sendPromise.then(() => {
+            TwitchPackets._messageQueue = TwitchPackets._messageQueue.filter(promise => promise !== sendPromise);
+            TwitchPackets._addMessageSentTime();
+        });
+
+        return sendPromise;
+    }
+
     static disconnect() {
         TwitchPackets._autoReconnect = false;
         TwitchPackets._username = null;
@@ -549,6 +664,27 @@ class TwitchPackets {
                 console.error('Twitch packets received a valid access token response without an refresh token. ', response);
                 return;
             }
+
+            const request = new XMLHttpRequest();
+            request.onload = () => {
+                if (request.status !== 200) {
+                    console.log('Request completed with an incorrect status. ', request.status);
+                    return reject(request.responseText);
+                }
+
+                console.log('Username request completed.');
+                TwitchPackets._username = JSON.parse(request.responseText).data[0].display_name;
+            };
+            request.onerror = () => {
+                console.error(request.responseText);
+            };
+
+            request.open('GET', 'https://api.twitch.tv/helix/users', false);
+            request.setRequestHeader('Authorization', 'Bearer ' + response.access_token);
+            request.setRequestHeader('Client-Id', TwitchPackets._clientID);
+            request.send();
+
+            console.log(TwitchPackets._username);
 
             TwitchPackets._refreshToken = response.refresh_token;
             TwitchPackets._createNewSocket(response.access_token);
